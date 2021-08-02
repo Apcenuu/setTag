@@ -50,24 +50,42 @@ class SetTagCommand extends Command
         $sheet = $spreadsheet->getSheet(0);
         $lastRow = $sheet->getHighestRow();
         $lastColumn = $sheet->getHighestColumn();
+        $count = 0;
 
         for ($row = 2; $row <= $lastRow; $row++) {
+//            if ($count > 10) die;
             $rowData = $sheet->rangeToArray('A' . $row . ':' . $lastColumn . $row,NULL,TRUE,FALSE);
             $rowData = array_shift($rowData);
-            $phone = $rowData[5];
-            if (!$phone) {
+//            dump($rowData);die;
+            $cedula = $rowData[0];
+            $email = $rowData[6];
+            if (!$cedula) {
+                $this->notFoundCustomers[] = [
+                    'cedula' => $cedula,
+                    'email'  => $email
+                ];
                 continue;
             }
-            if (is_string($phone)) {
-                $phone = str_replace(' ', '', $phone);
+            if (is_string($cedula)) {
+                $cedula = trim(str_replace(' ', '', $cedula));
             }
-            $phone = (string)$phone;
+            $cedula = (string)$cedula;
 
-            $customer = $this->findCustomerByPhone($phone);
+            $customer = $this->findCustomerByCedula($cedula);
+//            dump($customer);die;
+            if (!$customer && $email) {
+                $customer = $this->findCustomerByEmail($email);
+
+            }
+
             if ($customer) {
                 $this->addTagForCustomer($customer);
+                $count++;
             } else {
-                $this->notFoundCustomers[] = $phone;
+                $this->notFoundCustomers[] = [
+                    'cedula' => $cedula,
+                    'email'  => $email
+                ];
             }
         }
 
@@ -81,18 +99,30 @@ class SetTagCommand extends Command
         unlink('notFound.xlsx');
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        foreach ($this->notFoundCustomers as $key => $phone) {
-            $sheet->setCellValue('A' . $key, $phone);
+        foreach ($this->notFoundCustomers as $key => $customer) {
+            $sheet->setCellValue('A' . $key, $customer['cedula']);
+            $sheet->setCellValue('B' . $key, $customer['email']);
         }
 
         $writer = new Xlsx($spreadsheet);
         $writer->save('notFound.xlsx');
     }
 
-    private function findCustomerByPhone(string $phone)
+    private function findCustomerByCedula(string $cedula)
     {
         $request = new CustomersRequest();
-        $request->filter->name = $phone;
+        $request->filter->customFields['cedula'] = $cedula;
+        $response = $this->client->customers->list($request);
+//        dump($response);die;
+        $customers = $response->customers;
+
+        return array_shift($customers);
+    }
+
+    private function findCustomerByEmail(string $email)
+    {
+        $request = new CustomersRequest();
+        $request->filter->email = $email;
         $response = $this->client->customers->list($request);
         $customers = $response->customers;
         return array_shift($customers);
