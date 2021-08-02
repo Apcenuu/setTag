@@ -1,0 +1,17 @@
+{
+    "autoload": {
+        "psr-4": { "Acme\\": "src/" }
+    },
+    "require": {
+
+        "symfony/skeleton": "^5.3",
+        "symfony/console": "^5.3",
+        "composer-fallback/php-http.client-implementation.symfony": "^1.1",
+        "php-http/curl-client": "^2.2",
+        "retailcrm/api-client-php": "~6.0",
+        "phpoffice/phpspreadsheet": "^1.18"
+    },
+    "require-dev": {
+        "symfony/var-dumper": "^5.3"
+    }
+}
